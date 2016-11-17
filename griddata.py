@@ -324,27 +324,27 @@ def main():
         plot2d(interpolate_zeros.reshape(plotgrid.num))
     plt.show()
 
-    return
 
-
+def main2():
     points = np.array([
         [0., 0.],
         [2., 2.],
         [0.5, 2.],
+        [-1, 3],
     ])
     values = 1.
     radius = 0.5
 
     box = Box.from_points(points)
-    grid = Grid.from_box_raster(box, 0.2)
+    grid = Grid.from_box_raster(box, 0.5)
 
     indiv = zeros_for_interpolation_weighted_individual(grid, points, values, radius)
     cumul = zeros_for_interpolation_weighted_cumulative(grid, points, values, radius)
 
     # show zeros
     plot = Grid(grid.box, grid.num*10)
-    dist = scatter(plot, cumul[0], 0.1) - scatter(plot, points, 0.2)
-    plot2d(dist)
+    dist = scatter(plot, cumul, 0.1) - scatter(plot, points, 0.2)
+    plot2d(dist).show()
 
 
 if __name__ == '__main__':
