@@ -287,19 +287,17 @@ def main():
     """
 
     # grid for plotting
-    min_bound = np.array([0, 0])
-    max_bound = np.array([1, 1])
-    num_cells = 100
-    plotgrid = Grid(Box(min_bound, max_bound), num_cells)
+    pgrid = Grid(Box([0, 0], [1, 1]), 100)
     plot_radius = 0.05
     nozero_radius = 0.025
 
-    interpolate_grid = Grid(Box(min_bound, max_bound), 50)
+    # grid for interpolation
+    igrid = Grid(pgrid.box, 50)
 
     # probability distribution
 
     with trace("Generate probability distribution"):
-        orig_pdist = np.fromfunction(mysterious_prob_dist, plotgrid.num)
+        orig_pdist = np.fromfunction(mysterious_prob_dist, pgrid.num)
 
     with trace("Plotting probability distribution"):
         plot2d(orig_pdist)
@@ -311,12 +309,12 @@ def main():
         points = np.array([
             generate_particle(orig_pdist)
             for i in range(500)
-        ]) / (plotgrid.num - 1)
+        ]) / (pgrid.num - 1)
         values = np.ones(len(points))
         widths = np.ones(len(points))
 
     with trace("Generating particle scatter"):
-        plotdata = scatter(plotgrid, points, plot_radius)
+        plotdata = scatter(pgrid, points, plot_radius)
 
     with trace("Plotting particle scatter"):
         plot2d(plotdata)
@@ -326,11 +324,11 @@ def main():
 
     with trace("Computing zeros"):
         zero_points = far_points__weighted_cumulative(
-            interpolate_grid, points, values, widths, nozero_radius)
+            igrid, points, values, widths, nozero_radius)
         zero_values = np.zeros(len(zero_points))
 
     with trace("Generating zeros scatter"):
-        plotdata = scatter(plotgrid, zero_points, plot_radius)
+        plotdata = scatter(pgrid, zero_points, plot_radius)
 
     with trace("Plotting zeros scatter"):
         plot2d(plotdata)
@@ -341,10 +339,10 @@ def main():
     with trace("Interpolating without zeros"):
         interpolate_naive = scipy.interpolate.griddata(
             points, values,
-            plotgrid.xi(), fill_value=0)
+            pgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation without zeros"):
-        plot2d(interpolate_naive.reshape(plotgrid.num))
+        plot2d(interpolate_naive.reshape(pgrid.num))
     plt.show()
 
     # with zeros
@@ -353,10 +351,10 @@ def main():
         interpolate_zeros = scipy.interpolate.griddata(
             np.vstack((points, zero_points)),
             np.hstack((values, zero_values)),
-            plotgrid.xi(), fill_value=0)
+            pgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation with zeros"):
-        plot2d(interpolate_zeros.reshape(plotgrid.num))
+        plot2d(interpolate_zeros.reshape(pgrid.num))
     plt.show()
 
 
