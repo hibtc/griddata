@@ -38,7 +38,7 @@ def main():
     # probability distribution
 
     with trace("Generate probability distribution"):
-        orig_pdist = np.fromfunction(mysterious_prob_dist, pgrid.num)
+        orig_pdist = np.fromfunction(mysterious_prob_dist, pgrid.shape)
 
     with trace("Plotting probability distribution"):
         plot2d(orig_pdist)
@@ -50,7 +50,7 @@ def main():
         points = np.array([
             generate_particle(orig_pdist)
             for i in range(500)
-        ]) / (pgrid.num - 1)
+        ]) / (pgrid.shape - 1)
         values = np.ones(len(points))
         widths = np.ones(len(points))
 
@@ -83,7 +83,7 @@ def main():
             pgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation without zeros"):
-        plot2d(interpolate_naive.reshape(pgrid.num))
+        plot2d(interpolate_naive.reshape(pgrid.shape))
     plt.show()
 
     # with zeros
@@ -95,7 +95,7 @@ def main():
             pgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation with zeros"):
-        plot2d(interpolate_zeros.reshape(pgrid.num))
+        plot2d(interpolate_zeros.reshape(pgrid.shape))
     plt.show()
 
 

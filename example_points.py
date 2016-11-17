@@ -33,7 +33,7 @@ def main():
     cumul = far_points__weighted_cumulative(grid, points, values, widths, radius)
 
     # show zeros
-    plot = Grid(grid.box, grid.num*10)
+    plot = Grid(grid.box, grid.shape*10)
     dist = scatter(plot, points, 0.2)
     plot2d(dist).show()
     dist = scatter(plot, points, 0.2) - scatter(plot, indiv, 0.1)

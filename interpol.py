@@ -98,16 +98,16 @@ class Grid(object):
     divided into a number cells whose coordinates are located at the center.
 
     :ivar Box box:  the coordinate bounds
-    :ivar num:      [np.ndarray] number of sampling points in each direction
+    :ivar shape:    [np.ndarray] number of sampling points in each direction
     :ivar raster:   [np.ndarray] space between adjacent sampling points each direction
     """
 
-    def __init__(self, box, num):
+    def __init__(self, box, shape):
         self.box = box
-        self.num = np.asarray(row_vector(num, box.dim), dtype=int)
-        self.raster = box.size / (num - 1)
+        self.shape = np.asarray(row_vector(shape, box.dim), dtype=int)
+        self.raster = box.size / (shape - 1)
         self.min_index = np.zeros(box.dim, dtype=int)
-        self.max_index = self.num - 1
+        self.max_index = self.shape - 1
 
     @classmethod
     def from_box_raster(cls, box, raster):
@@ -135,8 +135,8 @@ class Grid(object):
     def xi(self):
         """Generate grid points for interpolation."""
         return np.array(list(
-            itertools.product(*(range(int(num)) for num in self.num))
-        )) * (self.box.size / self.num) + self.box.min_bound
+            itertools.product(*(range(int(num)) for num in self.shape))
+        )) * (self.box.size / self.shape) + self.box.min_bound
 
 
 #----------------------------------------
@@ -152,7 +152,7 @@ def elliptic_distance(grid, ellipse_center, ellipse_shape):
     # collect contributions for each dimension
     axis_contributions = (
         ((x-x0)/r) ** 2
-        for num, x0, r in zip(grid.num, ellipse_center, ellipse_shape)
+        for num, x0, r in zip(grid.shape, ellipse_center, ellipse_shape)
         for x in [np.linspace(0, 1, num)])
     mesh = np.meshgrid(*axis_contributions, indexing='ij')
     return np.sum(mesh, axis=0)
@@ -165,7 +165,7 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
     # collect contributions for each dimension
     axis_contributions = (
         (x-x0)**2/(2*sigma**2)
-        for num, x0, sigma in zip(grid.num, ellipse_center, ellipse_shape)
+        for num, x0, sigma in zip(grid.shape, ellipse_center, ellipse_shape)
         for x in [np.linspace(0, 1, num)])
     # need to specify indexing=ij, to avoid a transposition in the first two
     # arguments:
