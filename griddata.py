@@ -178,15 +178,16 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
 #----------------------------------------
 
 def far_points__weighted_cumulative(
-        grid, points, values, radius, threshold=1/np.exp(2)):
+        grid, points, values, widths, radius, threshold=1/np.exp(2)):
 
     points = np.asarray(points)
     values = row_vector(values, points.shape[0])
+    widths = row_vector(widths, points.shape[0])
 
     # place an normal distribution around each point with the radius weighted
     # by the corresponding intensity
-    dists = (normal_distribution(grid, point, value*radius)
-             for point, value in zip(points, values))
+    dists = (normal_distribution(grid, point, width*radius) * value
+             for point, value, width in zip(points, values, widths))
 
     # sum up contributions
     zero_mask = sum_(dists) <= threshold
@@ -199,15 +200,16 @@ def far_points__weighted_cumulative(
 
 
 def far_points__weighted_individual(
-        grid, points, values, radius, threshold=1):
+        grid, points, values, widths, radius, threshold=1):
 
     points = np.asarray(points)
     values = row_vector(values, points.shape[0])
+    widths = row_vector(widths, points.shape[0])
 
     # place an ellipse around each point with the radius weighted by the
     # corresponding intensity
-    dists = (elliptic_distance(grid, point, value*radius)
-             for point, value in zip(points, values))
+    dists = (elliptic_distance(grid, point, width*radius) / value
+             for point, value, width in zip(points, values, widths))
 
     # generate masks for individual points and compute their disjunction
     zero_mask = product_(d >= threshold for d in dists)
@@ -309,6 +311,7 @@ def main():
             for i in range(500)
         ]) / (plotgrid.num - 1)
         values = np.ones(len(points))
+        widths = np.ones(len(points))
 
     with trace("Generating particle scatter"):
         plotdata = scatter(plotgrid, points, plot_radius)
@@ -321,7 +324,7 @@ def main():
 
     with trace("Computing zeros"):
         zero_points = far_points__weighted_cumulative(
-            interpolate_grid, points, values, nozero_radius)
+            interpolate_grid, points, values, widths, nozero_radius)
         zero_values = np.zeros(len(zero_points))
 
     with trace("Generating zeros scatter"):
@@ -363,13 +366,14 @@ def main2():
         [-1, 3],
     ])
     values = 1.
+    widths = 1.
     radius = 0.5
 
     box = Box.from_points(points)
     grid = Grid.from_box_raster(box, 0.5)
 
-    indiv = far_points__weighted_individual(grid, points, values, radius)
-    cumul = far_points__weighted_cumulative(grid, points, values, radius)
+    indiv = far_points__weighted_individual(grid, points, values, widths, radius)
+    cumul = far_points__weighted_cumulative(grid, points, values, widths, radius)
 
     # show zeros
     plot = Grid(grid.box, grid.num*10)
