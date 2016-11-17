@@ -33,6 +33,10 @@ def sum_(values, initial=0):
     """Use `sum_(())` where `np.sum([])` would cause memory issues."""
     return functools.reduce(operator.add, values, initial)
 
+def product_(values, initial=1):
+    """Use `product_(())` where `np.product([])` would cause memory issues."""
+    return functools.reduce(operator.mul, values, initial)
+
 def unit_shape(dim, axis, size):
     """Return the shape of an 1D vector along the specified dimension."""
     return (1,) * (axis) + (size,) + (1,) * (dim-axis-1)
@@ -185,8 +189,7 @@ def zeros_for_interpolation_weighted_cumulative(
              for point, value in zip(points, values))
 
     # sum up contributions
-    cumulative = sum_(dists)
-    zero_mask = cumulative <= threshold
+    zero_mask = sum_(dists) <= threshold
 
     # TODO: select only those points in the convex hull
 
@@ -203,12 +206,11 @@ def zeros_for_interpolation_weighted_individual(
 
     # place an ellipse around each point with the radius weighted by the
     # corresponding intensity
-    dists = [elliptic_distance(grid, point, value*radius)
-             for point, value in zip(points, values)]
+    dists = (elliptic_distance(grid, point, value*radius)
+             for point, value in zip(points, values))
 
     # generate masks for individual points and compute their disjunction
-    individual = np.array(dists) <= threshold
-    zero_mask = np.any(individual, axis=0)
+    zero_mask = product_(d <= threshold for d in dists)
 
     # TODO: select only those points in the convex hull
 
