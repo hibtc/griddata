@@ -30,16 +30,13 @@ def array_round(x):
 
 def elliptic_distance(grid, ellipse_center, ellipse_shape):
     # Normalize to unit box:
-    grid_shape = grid.num
-    grid_extent = grid.box.size
-    ellipse_center = (ellipse_center - grid.min_point) / grid_extent
-    ellipse_shape = ellipse_shape / grid_extent
+    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
+    ellipse_shape = ellipse_shape / grid.box.size
     # collect contributions for each dimension
     axis_contributions = (
-        ((x-e_center)/e_size) ** 2
-        for g_size, e_center, e_size
-        in zip(grid_shape, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, g_size)])
+        ((x-x0)/r) ** 2
+        for num, x0, r in zip(grid.num, ellipse_center, ellipse_shape)
+        for x in [np.linspace(0, 1, num)])
     mesh = np.meshgrid(*axis_contributions, indexing='ij')
     return np.sum(mesh, axis=0)
 
@@ -55,16 +52,13 @@ def unit_shape(dim, axis, size):
 
 def normal_distribution(grid, ellipse_center, ellipse_shape):
     # Normalize to unit box:
-    grid_shape = grid.num
-    grid_extent = grid.box.size - grid.raster
-    ellipse_center = (ellipse_center - grid.min_point) / grid_extent
-    ellipse_shape = ellipse_shape / grid_extent
+    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
+    ellipse_shape = ellipse_shape / grid.box.size
     # collect contributions for each dimension
     axis_contributions = (
-        (x-e_center)**2/(2*e_size**2)
-        for g_size, e_center, e_size
-        in zip(grid_shape, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, g_size)])
+        (x-x0)**2/(2*sigma**2)
+        for num, x0, sigma in zip(grid.num, ellipse_center, ellipse_shape)
+        for x in [np.linspace(0, 1, num)])
     # need to specify indexing=ij, to avoid a transposition in the first two
     # arguments:
     mesh = np.meshgrid(*axis_contributions, indexing='ij')
@@ -138,9 +132,7 @@ class Grid(object):
         self.box = box
         self.num = np.asarray(row_vector(num, box.dim), dtype=int)
         self.raster = box.size / (num - 1)
-        self.min_point = self.box.min_bound
-        self.max_point = self.box.max_bound
-        self.min_index = np.zeros(self.box.dim, dtype=int)
+        self.min_index = np.zeros(box.dim, dtype=int)
         self.max_index = self.num - 1
 
     @classmethod
@@ -153,7 +145,7 @@ class Grid(object):
 
     def index_to_point(self, index):
         """Convert index in the represented mesh to coordinate point."""
-        return self.min_point + index * self.raster
+        return self.box.min_bound + index * self.raster
 
     def point_to_index(self, point):
         """Convert coordinate point to index in the represented mesh."""
@@ -161,7 +153,7 @@ class Grid(object):
         if point.ndim == 2:
             return np.array([self.point_to_index(p) for p in point])
         return np.asarray(
-            np.clip(np.round((point - self.min_point) / self.raster),
+            np.clip(np.round((point - self.box.min_bound) / self.raster),
                     self.min_index,
                     self.max_index),
             dtype=int)
