@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 import scipy.interpolate
 
 
+#----------------------------------------
+# Utility functions
+#----------------------------------------
 
 def where(x):
     """Return list of index vectors where array is nonzero."""
@@ -26,51 +29,13 @@ def array_round(x):
     """Round array and return as integer array."""
     return np.asarray(np.round(x), dtype=int)
 
-
-# TODO: smooth ellipses by integrating value in the square
-
-def elliptic_distance(grid, ellipse_center, ellipse_shape):
-    # Normalize to unit box:
-    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
-    ellipse_shape = ellipse_shape / grid.box.size
-    # collect contributions for each dimension
-    axis_contributions = (
-        ((x-x0)/r) ** 2
-        for num, x0, r in zip(grid.num, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, num)])
-    mesh = np.meshgrid(*axis_contributions, indexing='ij')
-    return np.sum(mesh, axis=0)
-
-
 def sum_(values, initial=0):
     """Use `sum_(())` where `np.sum([])` would cause memory issues."""
     return functools.reduce(operator.add, values, initial)
 
-
 def unit_shape(dim, axis, size):
+    """Return the shape of an 1D vector along the specified dimension."""
     return (1,) * (axis) + (size,) + (1,) * (dim-axis-1)
-
-
-def normal_distribution(grid, ellipse_center, ellipse_shape):
-    # Normalize to unit box:
-    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
-    ellipse_shape = ellipse_shape / grid.box.size
-    # collect contributions for each dimension
-    axis_contributions = (
-        (x-x0)**2/(2*sigma**2)
-        for num, x0, sigma in zip(grid.num, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, num)])
-    # need to specify indexing=ij, to avoid a transposition in the first two
-    # arguments:
-    mesh = np.meshgrid(*axis_contributions, indexing='ij')
-    collected = np.sum(mesh, axis=0)
-    # Could alternatively use a solution based on numpy arrays' broadcasting
-    # ability::
-    #collected = sum_(
-    #    contrib.reshape(unit_shape(grid.box.dim, axis, len(contrib)))
-    #    for axis, contrib in enumerate(axis_contributions))
-    return np.exp(-collected)
-
 
 def row_scalar(val):
     """Coerce array to row vector, leave scalar as is."""
@@ -88,6 +53,10 @@ def col_vector(val, dim):
     """Broadcast to row vector."""
     return np.ones((dim, 1)) * col_scalar(val)
 
+
+#----------------------------------------
+# Gridding
+#----------------------------------------
 
 class Box(object):
 
@@ -160,6 +129,50 @@ class Grid(object):
             dtype=int)
 
 
+#----------------------------------------
+# Distributions
+#----------------------------------------
+
+# TODO: smooth ellipses by integrating value in the square
+
+def elliptic_distance(grid, ellipse_center, ellipse_shape):
+    # Normalize to unit box:
+    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
+    ellipse_shape = ellipse_shape / grid.box.size
+    # collect contributions for each dimension
+    axis_contributions = (
+        ((x-x0)/r) ** 2
+        for num, x0, r in zip(grid.num, ellipse_center, ellipse_shape)
+        for x in [np.linspace(0, 1, num)])
+    mesh = np.meshgrid(*axis_contributions, indexing='ij')
+    return np.sum(mesh, axis=0)
+
+
+def normal_distribution(grid, ellipse_center, ellipse_shape):
+    # Normalize to unit box:
+    ellipse_center = (ellipse_center - grid.box.min_bound) / grid.box.size
+    ellipse_shape = ellipse_shape / grid.box.size
+    # collect contributions for each dimension
+    axis_contributions = (
+        (x-x0)**2/(2*sigma**2)
+        for num, x0, sigma in zip(grid.num, ellipse_center, ellipse_shape)
+        for x in [np.linspace(0, 1, num)])
+    # need to specify indexing=ij, to avoid a transposition in the first two
+    # arguments:
+    mesh = np.meshgrid(*axis_contributions, indexing='ij')
+    collected = np.sum(mesh, axis=0)
+    # Could alternatively use a solution based on numpy arrays' broadcasting
+    # ability::
+    #collected = sum_(
+    #    contrib.reshape(unit_shape(grid.box.dim, axis, len(contrib)))
+    #    for axis, contrib in enumerate(axis_contributions))
+    return np.exp(-collected)
+
+
+#----------------------------------------
+# Find regions that are far away from any measured points
+#----------------------------------------
+
 def zeros_for_interpolation_weighted_cumulative(
         grid, points, values, radius, threshold=1/np.exp(2)):
 
@@ -220,7 +233,12 @@ def generate_particle(pdist):
     return result
 
 
+#----------------------------------------
+# Tools for the main
+#----------------------------------------
+
 def scatter(grid, points, radius):
+    """Generate a nice scatter plot."""
     # use `sum_(())` instead of `np.sum([])` to avoid huge memory bloat (!)
     return sum_(normal_distribution(grid, point, radius)
                 for point in points)
@@ -232,7 +250,7 @@ def plot2d(image):
     return plt
 
 
-def special_function(x, y):
+def mysterious_prob_dist(x, y):
     x, y = x/35, y/35
     return 1 - np.cos(x - y**2)
 
@@ -249,6 +267,15 @@ def trace(message):
 
 
 def main():
+
+    """
+    Generate particles from a given probability distribution where each
+    particle is assigned a value of one. Then interpolate between the found
+    data points with `griddata`. For comparison, search regions far away from
+    any found points and insert zero values at these locations. Interpolate
+    with this modification.
+    """
+
     # grid for plotting
     min_bound = np.array([0, 0])
     max_bound = np.array([1, 1])
@@ -266,7 +293,7 @@ def main():
     # probability distribution
 
     with trace("Generate probability distribution"):
-        orig_pdist = np.fromfunction(special_function, plotgrid.num)
+        orig_pdist = np.fromfunction(mysterious_prob_dist, plotgrid.num)
 
     with trace("Plotting probability distribution"):
         plot2d(orig_pdist)
@@ -349,6 +376,4 @@ def main2():
 
 
 if __name__ == '__main__':
-
     main()
-
