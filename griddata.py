@@ -177,7 +177,7 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
 # Find regions that are far away from any measured points
 #----------------------------------------
 
-def zeros_for_interpolation_weighted_cumulative(
+def far_points__weighted_cumulative(
         grid, points, values, radius, threshold=1/np.exp(2)):
 
     points = np.asarray(points)
@@ -198,7 +198,7 @@ def zeros_for_interpolation_weighted_cumulative(
     return zero_points
 
 
-def zeros_for_interpolation_weighted_individual(
+def far_points__weighted_individual(
         grid, points, values, radius, threshold=1):
 
     points = np.asarray(points)
@@ -320,7 +320,7 @@ def main():
     # zeros scatter
 
     with trace("Computing zeros"):
-        zero_points = zeros_for_interpolation_weighted_cumulative(
+        zero_points = far_points__weighted_cumulative(
             interpolate_grid, points, values, nozero_radius)
         zero_values = np.zeros(len(zero_points))
 
@@ -368,8 +368,8 @@ def main2():
     box = Box.from_points(points)
     grid = Grid.from_box_raster(box, 0.5)
 
-    indiv = zeros_for_interpolation_weighted_individual(grid, points, values, radius)
-    cumul = zeros_for_interpolation_weighted_cumulative(grid, points, values, radius)
+    indiv = far_points__weighted_individual(grid, points, values, radius)
+    cumul = far_points__weighted_cumulative(grid, points, values, radius)
 
     # show zeros
     plot = Grid(grid.box, grid.num*10)
