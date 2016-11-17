@@ -210,7 +210,7 @@ def far_points__weighted_individual(
              for point, value in zip(points, values))
 
     # generate masks for individual points and compute their disjunction
-    zero_mask = product_(d <= threshold for d in dists)
+    zero_mask = product_(d >= threshold for d in dists)
 
     # TODO: select only those points in the convex hull
 
