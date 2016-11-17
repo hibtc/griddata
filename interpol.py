@@ -200,9 +200,7 @@ def far_points__weighted_cumulative(
 
     # TODO: select only those points in the convex hull
 
-    zero_indices = where(zero_mask)
-    zero_points = grid.index_to_point(zero_indices)
-    return zero_points
+    return grid.index_to_point(where(zero_mask))
 
 
 def far_points__weighted_individual(
@@ -222,9 +220,7 @@ def far_points__weighted_individual(
 
     # TODO: select only those points in the convex hull
 
-    zero_indices = where(zero_mask)
-    zero_points = grid.index_to_point(zero_indices)
-    return zero_points
+    return grid.index_to_point(where(zero_mask))
 
 
 def generate_particle(pdist):
