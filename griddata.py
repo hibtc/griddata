@@ -35,16 +35,17 @@ def elliptic_distance(grid, ellipse_center, ellipse_shape):
     ellipse_center = (ellipse_center - grid.min_point) / grid_extent
     ellipse_shape = ellipse_shape / grid_extent
     # collect contributions for each dimension
-    mesh = np.meshgrid(*(
+    axis_contributions = (
         ((x-e_center)/e_size) ** 2
         for g_size, e_center, e_size
         in zip(grid_shape, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, g_size)]
-    ))
+        for x in [np.linspace(0, 1, g_size)])
+    mesh = np.meshgrid(*axis_contributions, indexing='ij')
     return np.sum(mesh, axis=0)
 
 
 def sum_(values, initial=0):
+    """Use `sum_(())` where `np.sum([])` would cause memory issues."""
     return functools.reduce(operator.add, values, initial)
 
 
@@ -63,15 +64,16 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
         (x-e_center)**2/(2*e_size**2)
         for g_size, e_center, e_size
         in zip(grid_shape, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, g_size)]
-    )
-    # can't use the following because meshgrid returns a weird transpose:
-    #   collected = np.sum(np.meshgrid(*contributions), axis=0)
-
-    # Instead, making use of numpy's broadcasting:
-    collected = sum_(
-        contrib.reshape(unit_shape(grid.box.dim, axis, len(contrib)))
-        for axis, contrib in enumerate(axis_contributions))
+        for x in [np.linspace(0, 1, g_size)])
+    # need to specify indexing=ij, to avoid a transposition in the first two
+    # arguments:
+    mesh = np.meshgrid(*axis_contributions, indexing='ij')
+    collected = np.sum(mesh, axis=0)
+    # Could alternatively use a solution based on numpy arrays' broadcasting
+    # ability::
+    #collected = sum_(
+    #    contrib.reshape(unit_shape(grid.box.dim, axis, len(contrib)))
+    #    for axis, contrib in enumerate(axis_contributions))
     return np.exp(-collected)
 
 
