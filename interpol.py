@@ -7,6 +7,7 @@ import itertools
 import functools
 import operator
 import time
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -264,6 +265,7 @@ def mysterious_prob_dist(x, y):
 @contextlib.contextmanager
 def trace(message):
     print(message, end='')
+    sys.stdout.flush()
     start = time.time()
     try:
         yield None
