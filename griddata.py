@@ -201,8 +201,7 @@ def zeros_for_interpolation_weighted_individual(
 
     zero_indices = where(zero_mask)
     zero_points = grid.index_to_point(zero_indices)
-    zero_values = np.zeros((len(zero_points), 1))
-    return (zero_indices, zero_values)
+    return zero_points
 
 
 def generate_particle(pdist):
