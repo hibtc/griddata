@@ -132,6 +132,12 @@ class Grid(object):
                     self.max_index),
             dtype=int)
 
+    def xi(self):
+        """Generate grid points for interpolation."""
+        return np.array(list(
+            itertools.product(*(range(int(num)) for num in self.num))
+        )) * (self.box.size / self.num) + self.box.min_bound
+
 
 #----------------------------------------
 # Distributions
@@ -290,10 +296,6 @@ def main():
 
     interpolate_grid = Grid(Box(min_bound, max_bound), 50)
 
-    xi = np.array(list(
-        itertools.product(*(range(int(num)) for num in plotgrid.num))
-    )) / plotgrid.num
-
     # probability distribution
 
     with trace("Generate probability distribution"):
@@ -339,7 +341,7 @@ def main():
     with trace("Interpolating without zeros"):
         interpolate_naive = scipy.interpolate.griddata(
             points, values,
-            xi, fill_value=0)
+            plotgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation without zeros"):
         plot2d(interpolate_naive.reshape(plotgrid.num))
@@ -351,7 +353,7 @@ def main():
         interpolate_zeros = scipy.interpolate.griddata(
             np.vstack((points, zero_points)),
             np.hstack((values, zero_values)),
-            xi, fill_value=0)
+            plotgrid.xi(), fill_value=0)
 
     with trace("Plotting interpolation with zeros"):
         plot2d(interpolate_zeros.reshape(plotgrid.num))
