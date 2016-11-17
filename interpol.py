@@ -1,17 +1,16 @@
+"""
+Utilities for working with numpy arrays and interpolation.
+"""
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from __future__ import division
-from __future__ import print_function
 
-import contextlib
 import itertools
 import functools
 import operator
-import time
-import sys
 
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.interpolate
 
 
 #----------------------------------------
@@ -249,137 +248,3 @@ def scatter(grid, points, radius):
     # use `sum_(())` instead of `np.sum([])` to avoid huge memory bloat (!)
     return sum_(normal_distribution(grid, point, radius)
                 for point in points)
-
-
-def plot2d(image):
-    plt.imshow(image)
-    plt.colorbar()
-    return plt
-
-
-def mysterious_prob_dist(x, y):
-    x, y = x/35, y/35
-    return 1 - np.cos(x - y**2)
-
-
-@contextlib.contextmanager
-def trace(message):
-    print(message, end='')
-    sys.stdout.flush()
-    start = time.time()
-    try:
-        yield None
-    finally:
-        stop = time.time()
-        print("  .. {:.3f}s".format(stop - start))
-
-
-def main():
-
-    """
-    Generate particles from a given probability distribution where each
-    particle is assigned a value of one. Then interpolate between the found
-    data points with `griddata`. For comparison, search regions far away from
-    any found points and insert zero values at these locations. Interpolate
-    with this modification.
-    """
-
-    # grid for plotting
-    pgrid = Grid(Box([0, 0], [1, 1]), 100)
-    plot_radius = 0.05
-    nozero_radius = 0.025
-
-    # grid for interpolation
-    igrid = Grid(pgrid.box, 50)
-
-    # probability distribution
-
-    with trace("Generate probability distribution"):
-        orig_pdist = np.fromfunction(mysterious_prob_dist, pgrid.num)
-
-    with trace("Plotting probability distribution"):
-        plot2d(orig_pdist)
-    plt.show()
-
-    # particle scatter
-
-    with trace("Generate particles"):
-        points = np.array([
-            generate_particle(orig_pdist)
-            for i in range(500)
-        ]) / (pgrid.num - 1)
-        values = np.ones(len(points))
-        widths = np.ones(len(points))
-
-    with trace("Generating particle scatter"):
-        plotdata = scatter(pgrid, points, plot_radius)
-
-    with trace("Plotting particle scatter"):
-        plot2d(plotdata)
-    plt.show()
-
-    # zeros scatter
-
-    with trace("Computing zeros"):
-        zero_points = far_points__weighted_cumulative(
-            igrid, points, values, widths, nozero_radius)
-        zero_values = np.zeros(len(zero_points))
-
-    with trace("Generating zeros scatter"):
-        plotdata = scatter(pgrid, zero_points, plot_radius)
-
-    with trace("Plotting zeros scatter"):
-        plot2d(plotdata)
-    plt.show()
-
-    # without zeros
-
-    with trace("Interpolating without zeros"):
-        interpolate_naive = scipy.interpolate.griddata(
-            points, values,
-            pgrid.xi(), fill_value=0)
-
-    with trace("Plotting interpolation without zeros"):
-        plot2d(interpolate_naive.reshape(pgrid.num))
-    plt.show()
-
-    # with zeros
-
-    with trace("Interpolating with zeros"):
-        interpolate_zeros = scipy.interpolate.griddata(
-            np.vstack((points, zero_points)),
-            np.hstack((values, zero_values)),
-            pgrid.xi(), fill_value=0)
-
-    with trace("Plotting interpolation with zeros"):
-        plot2d(interpolate_zeros.reshape(pgrid.num))
-    plt.show()
-
-
-def example2():
-    points = np.array([
-        [0., 0.],
-        [2., 2.],
-        [0.5, 2.],
-        [-1, 3],
-    ])
-    values = 1.
-    widths = 1.
-    radius = 0.5
-
-    box = Box.from_points(points)
-    grid = Grid.from_box_raster(box, 0.5)
-
-    indiv = far_points__weighted_individual(grid, points, values, widths, radius)
-    cumul = far_points__weighted_cumulative(grid, points, values, widths, radius)
-
-    # show zeros
-    plot = Grid(grid.box, grid.num*10)
-    dist = scatter(plot, points, 0.2)
-    plot2d(dist).show()
-    dist = scatter(plot, points, 0.2) - scatter(plot, indiv, 0.1)
-    plot2d(dist).show()
-
-
-if __name__ == '__main__':
-    main()
