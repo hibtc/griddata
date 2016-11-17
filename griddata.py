@@ -228,6 +228,7 @@ def scatter(grid, points, radius):
 
 def plot2d(image):
     plt.imshow(image)
+    plt.colorbar()
     return plt
 
 
