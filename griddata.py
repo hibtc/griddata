@@ -31,7 +31,7 @@ def array_round(x):
 def elliptic_distance(grid, ellipse_center, ellipse_shape):
     # Normalize to unit box:
     grid_shape = grid.cells
-    grid_extent = grid.box.size - grid.raster
+    grid_extent = grid.box.size
     ellipse_center = (ellipse_center - grid.min_point) / grid_extent
     ellipse_shape = ellipse_shape / grid_extent
     # collect contributions for each dimension
@@ -63,7 +63,7 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
         (x-e_center)**2/(2*e_size**2)
         for g_size, e_center, e_size
         in zip(grid_shape, ellipse_center, ellipse_shape)
-        for x in [np.linspace(0, 1, g_size)]
+        for x in [np.linspace(0, 1, 1+g_size)]
     )
     # can't use the following because meshgrid returns a weird transpose:
     #   collected = np.sum(np.meshgrid(*contributions), axis=0)
@@ -111,20 +111,14 @@ class Box(object):
         self.size = self.max_bound - self.min_bound
 
     @classmethod
-    def from_points_fuzzy(cls, points, values, radius):
+    def from_points(cls, points):
         """
         Find min/max coordinates with additional space at edges for ellipses
         around the individual points with half-axes weighted.
-
-        :param points:  [np.ndarray]        coordinate vectors
-        :param values:  [np.ndarray]        point's ellipse half-axes weights
-        :param radius:  [np.ndarray|float]  ellipse's half-axes coefficients
         """
         points = np.asarray(points)
-        values = col_scalar(values)
-        radius = row_scalar(radius)
-        return cls(np.min(points-values*radius, axis=0),
-                   np.max(points+values*radius, axis=0))
+        return cls(np.min(points, axis=0),
+                   np.max(points, axis=0))
 
 
 class Grid(object):
@@ -142,8 +136,8 @@ class Grid(object):
         self.box = box
         self.cells = np.asarray(row_vector(cells, box.dim), dtype=int)
         self.raster = box.size / cells
-        self.min_point = self.box.min_bound + self.raster/2
-        self.max_point = self.box.max_bound - self.raster/2
+        self.min_point = self.box.min_bound
+        self.max_point = self.box.max_bound
         self.min_index = np.zeros(self.box.dim, dtype=int)
         self.max_index = self.cells
 
@@ -347,7 +341,7 @@ def main():
     values = 1.
     radius = 0.5
 
-    box = Box.from_points_fuzzy(points, values, radius)
+    box = Box.from_points(points)
     grid = Grid.from_box_raster(box, 0.2)
 
     indiv = zeros_for_interpolation_weighted_individual(grid, points, values, radius)
