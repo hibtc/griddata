@@ -358,7 +358,7 @@ def main():
     plt.show()
 
 
-def main2():
+def example2():
     points = np.array([
         [0., 0.],
         [2., 2.],
@@ -377,7 +377,9 @@ def main2():
 
     # show zeros
     plot = Grid(grid.box, grid.num*10)
-    dist = scatter(plot, cumul, 0.1) - scatter(plot, points, 0.2)
+    dist = scatter(plot, points, 0.2)
+    plot2d(dist).show()
+    dist = scatter(plot, points, 0.2) - scatter(plot, indiv, 0.1)
     plot2d(dist).show()
 
 
