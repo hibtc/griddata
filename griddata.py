@@ -1,5 +1,6 @@
 
 from __future__ import division
+from __future__ import print_function
 
 import contextlib
 import itertools
@@ -238,7 +239,7 @@ def special_function(x, y):
 
 @contextlib.contextmanager
 def trace(message):
-    print(message)
+    print(message, end='')
     start = time.time()
     try:
         yield None
