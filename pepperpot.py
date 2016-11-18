@@ -5,7 +5,7 @@ Usage:
     pepperpot interpol zeros INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-z SHAPE]
     pepperpot interpol gauss INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-w WIDTH]
     pepperpot interpol arith INPUT OUTPUT [-r RADIUS] [-i SHAPE]
-    pepperpot generate INPUT [OUTPUT] [-n NUM] [-p PPP]
+    pepperpot generate INPUT [OUTPUT] [-n NUM] [-p PPP] [-g SHAPE]
     pepperpot plot gauss INPUT [OUTPUT] [-r RADIUS] [-g SHAPE]
     pepperpot plot point INPUT [OUTPUT] [-r RADIUS]
     pepperpot plot pdist INPUT [OUTPUT]
@@ -23,9 +23,10 @@ Interpolation options:
 Particle generation options:
     -n NUM, --number NUM            Number of particles to generate [default: 500]
     -p FILE, --pepperpot FILE       Pepperpot file for normalizing the grid size
+    -g SHAPE, --grid SHAPE          Generate grid shape [default: 25]
 
 Plot options:
-    -g SHAPE, --grid SHAPE          Plot grid shape [default: 25]
+    grid                            Plot grid shape [default: 25]
     radius                          Point radius [default: 2,2,4,4]
 
 Interpolation commands:
@@ -68,7 +69,7 @@ from docopt import docopt
 from util import plot2d, trace
 from interpol import (
     Grid, Box, far_points__weighted_cumulative,
-    scatter, generate_particle,
+    scatter, generate_particle_interpol,
     restrict_to_polytope,
     moving_average,
     gaussian_filter_local_exact,
@@ -223,16 +224,17 @@ def interpol_main(opts):
 
 def generate_main(opts):
     pdist = np.load(opts['INPUT'])
+    shape = scalar_or_vector(opts['--grid'], int)
     count = int(opts['--number'])
     with trace("Generating {} particles".format(count)):
         particles = np.array([
-            generate_particle(pdist)
+            generate_particle_interpol(pdist, shape)
             for i in range(count)
         ])
     if opts['--pepperpot']:
         points, values = read_ppp(opts['--pepperpot'])
         box = Box.from_points(points)
-        scale = box.size / np.array(pdist.shape)
+        scale = box.size / (np.array(shape) * np.array(pdist.shape))
         particles = particles * scale + box.min_bound
 
     particles = np.hstack((particles, np.ones((len(particles), 1))))

@@ -125,7 +125,7 @@ class Grid(object):
     def __init__(self, box, shape):
         self.box = box
         self.shape = array_toint(row_vector(shape, box.dim))
-        self.raster = box.size / (shape - 1)
+        self.raster = box.size / (self.shape - 1)
         self.min_index = np.zeros(box.dim, dtype=int)
         self.max_index = self.shape - 1
 
@@ -309,6 +309,32 @@ def generate_particle(pdist):
         result = np.hstack((result, coord))
         # restrict probability distribution to the given case:
         pdist = pdist[coord]
+    return result
+
+
+def generate_particle_interpol(pdist, slices):
+    slices = array_toint(row_vector(slices, pdist.ndim))
+    result = np.empty(0, dtype=int)
+    for wanted_divs, known_divs in zip(slices, pdist.shape):
+        # determine probabilities for finding a particular value of X, where X
+        # is the first left-over dimension in the probability distribution:
+        yz_axes = tuple(range(1, pdist.ndim))
+        x_weights = np.sum(pdist, axis=yz_axes)
+        x_pdist = x_weights / np.sum(x_weights)
+        # generate value for X and append to result coordinate vector:
+        x_choice = np.random.choice(known_divs, p=x_pdist)
+        # restrict probability distribution to the given case:
+        pdist = pdist[x_choice]
+
+        # fine-tune value of x
+        yi = x_weights[max(x_choice-1, 0):
+                       min(x_choice+2, known_divs)]
+        xi = range(len(yi))
+        x_fine = np.linspace(0, xi[-1], wanted_divs)
+        interp = np.interp(x_fine, xi, yi)
+        interp /= np.sum(interp)
+        x = np.random.choice(wanted_divs, p=interp)
+        result = np.hstack((result, x_choice*wanted_divs + x))
     return result
 
 
