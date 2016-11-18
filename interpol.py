@@ -196,7 +196,7 @@ def far_points__weighted_cumulative(
              for point, value, width in zip(points, values, widths))
 
     # sum up contributions
-    zero_mask = sum_(dists) <= threshold
+    zero_mask = sum_(dists) < threshold
 
     # TODO: select only those points in the convex hull
 
@@ -216,7 +216,7 @@ def far_points__weighted_individual(
              for point, value, width in zip(points, values, widths))
 
     # generate masks for individual points and compute their disjunction
-    zero_mask = product_(d >= threshold for d in dists)
+    zero_mask = product_(d > threshold for d in dists)
 
     # TODO: select only those points in the convex hull
 
