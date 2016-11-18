@@ -24,11 +24,11 @@ def where(x):
 
 def array_ceil(x):
     """Round array up and return as integer array."""
-    return np.asarray(np.ceil(x), dtype=int)
+    return array_toint(np.ceil(x))
 
 def array_round(x):
     """Round array and return as integer array."""
-    return np.asarray(np.round(x), dtype=int)
+    return array_toint(np.round(x))
 
 def sum_(values, initial=0):
     """Use `sum_(())` where `np.sum([])` would cause memory issues."""
@@ -57,6 +57,9 @@ def row_vector(val, dim):
 def col_vector(val, dim):
     """Broadcast to row vector."""
     return np.ones((dim, 1)) * col_scalar(val)
+
+def array_toint(val):
+    return np.asarray(val, dtype=int)
 
 
 def _prep(points, values, widths):
@@ -121,7 +124,7 @@ class Grid(object):
 
     def __init__(self, box, shape):
         self.box = box
-        self.shape = np.asarray(row_vector(shape, box.dim), dtype=int)
+        self.shape = array_toint(row_vector(shape, box.dim))
         self.raster = box.size / (shape - 1)
         self.min_index = np.zeros(box.dim, dtype=int)
         self.max_index = self.shape - 1
@@ -152,11 +155,10 @@ class Grid(object):
         point = np.asarray(point)
         if point.ndim == 2:
             return np.array([self.point_to_index(p) for p in point])
-        return np.asarray(
+        return array_toint(
             np.clip(np.round((point - self.box.min_bound) / self.raster),
                     self.min_index,
-                    self.max_index),
-            dtype=int)
+                    self.max_index))
 
     def xi(self):
         """Generate grid points for interpolation."""
