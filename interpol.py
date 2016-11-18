@@ -11,6 +11,7 @@ import functools
 import operator
 
 import numpy as np
+import scipy.ndimage
 
 
 #----------------------------------------
@@ -90,6 +91,11 @@ class Box(object):
         return cls(np.min(points, axis=0),
                    np.max(points, axis=0))
 
+    def projection(self, axes):
+        axes = list(axes)
+        return self.__class__(self.min_bound[axes],
+                              self.max_bound[axes])
+
 
 class Grid(object):
 
@@ -116,6 +122,15 @@ class Grid(object):
         :class:`Grid` instance will hold the real raster size.
         """
         return cls(box, array_ceil(box.size/raster))
+
+    def subgrid(self, box):
+        min_index = self.point_to_index(box.min_bound)
+        max_index = self.point_to_index(box.max_bound)
+        clipped_box = Box(self.index_to_point(min_index),
+                          self.index_to_point(max_index))
+        subgrid = Grid(clipped_box, max_index - min_index + 1)
+        indices = tuple(slice(lo, hi+1) for lo, hi in zip(min_index, max_index))
+        return subgrid, indices
 
     def index_to_point(self, index):
         """Convert index in the represented mesh to coordinate point."""
@@ -178,6 +193,53 @@ def normal_distribution(grid, ellipse_center, ellipse_shape):
     #    for axis, contrib in enumerate(axis_contributions))
     return np.exp(-collected)
 
+
+def gaussian_filter_global_approximate(grid, points, values, radius):
+    result = np.zeros(grid.shape)
+    counts = np.zeros(grid.shape, dtype=int)
+    for point, value in zip(points, values):
+        index = grid.point_to_index(point)
+        result[index] += value
+        counts[index] += 1
+    region = ~np.isclose(counts, 0)
+    result[region] /= counts[region]
+    return scipy.ndimage.gaussian_filter(result, radius)
+
+
+def moving_average(grid, points, values, widths, radius, threshold=1):
+    def filt(subgrid, point, width):
+        dist = np.ones(subgrid.shape)
+        ance = elliptic_distance(subgrid, point, width)
+        dist[ance > threshold] = 0
+        return dist
+    return local_linear_filter(grid, points, values, widths, radius, filt)
+
+
+def gaussian_filter_local_exact(grid, points, values, widths, radius,
+                                threshold=1/np.exp(2)):
+    def filt(subgrid, point, width):
+        dist = normal_distribution(subgrid, point, width)
+        dist[dist < threshold] = 0
+        return dist
+    return local_linear_filter(grid, points, values, widths, radius, filt)
+
+
+def local_linear_filter(grid, points, values, widths, radius, func):
+    points = np.asarray(points)
+    values = row_vector(values, points.shape[0])
+    widths = row_vector(widths, points.shape[0])
+    result = np.zeros(grid.shape)
+    counts = np.zeros(grid.shape, dtype=int)
+    for point, value, width in zip(points, values, widths):
+        subbox = Box(point - radius,
+                     point + radius)
+        subgrid, indices = grid.subgrid(subbox)
+        dist = func(subgrid, point, width*radius)
+        result[indices] += dist * value
+        counts[indices] += ~np.isclose(dist, 0)
+    region = ~np.isclose(counts, 0)
+    result[region] /= counts[region]
+    return result
 
 #----------------------------------------
 # Find regions that are far away from any measured points
