@@ -16,6 +16,7 @@ import tempfile
 import sys
 
 import numpy as np
+import scipy.spatial
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
@@ -25,6 +26,7 @@ from util import plot2d, trace
 from interpol import (
     Grid, Box, far_points__weighted_cumulative,
     scatter, generate_particle,
+    restrict_to_polytope,
 )
 
 
@@ -52,10 +54,16 @@ def interpolate_pdist(points, values, widths, igrid, zgrid, radius):
     with trace("Computing zeros"):
         zero_points = far_points__weighted_cumulative(
             zgrid, points, values, widths, radius)
-        zero_values = np.zeros(len(zero_points))
-    print("Number of zero points: {}".format(len(zero_points)))
+    print("  Number of zero points: {}".format(len(zero_points)))
+
+    with trace("Restricting to convex hull"):
+        hull = scipy.spatial.ConvexHull(np.array(points))
+        zero_points = restrict_to_polytope(hull.equations, zero_points)
+    print("  Relative hull volume: {}".format(hull.volume / zgrid.box.volume))
+    print("  Selected zero points: {}".format(len(zero_points)))
 
     with trace("Interpolating 4D probability distribution"):
+        zero_values = np.zeros(len(zero_points))
         pdist = scipy.interpolate.griddata(
             np.vstack((points, zero_points)),
             np.hstack((values, zero_values)),

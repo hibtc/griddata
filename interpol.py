@@ -103,6 +103,10 @@ class Box(object):
         return self.__class__(self.min_bound[axes],
                               self.max_bound[axes])
 
+    @property
+    def volume(self):
+        return np.product(self.size)
+
 
 class Grid(object):
 
@@ -263,8 +267,6 @@ def far_points__weighted_cumulative(
     # sum up contributions
     zero_mask = sum_(dists) < threshold
 
-    # TODO: select only those points in the convex hull
-
     return grid.index_to_point(where(zero_mask))
 
 
@@ -281,9 +283,15 @@ def far_points__weighted_individual(
     # generate masks for individual points and compute their disjunction
     zero_mask = product_(d > threshold for d in dists)
 
-    # TODO: select only those points in the convex hull
-
     return grid.index_to_point(where(zero_mask))
+
+
+def restrict_to_polytope(facets, candidates):
+    # select only those points in the convex hull
+    normal, offset = facets[:,:-1], facets[:,-1]
+    return [p for p in candidates
+            if np.all(np.dot(normal, p.T) + offset <= 0)]
+    #return candidates[np.all(normal @ candidates.T + offset <= 0, axis=0)]
 
 
 def generate_particle(pdist):
