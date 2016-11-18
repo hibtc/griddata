@@ -9,6 +9,7 @@ Usage:
     pepperpot plot gauss INPUT [OUTPUT] [-r RADIUS] [-g SHAPE]
     pepperpot plot point INPUT [OUTPUT] [-r RADIUS]
     pepperpot plot pdist INPUT [OUTPUT]
+    pepperpot info INPUT
     pepperpot (-h | -v)
 
 Arguments:
@@ -188,6 +189,8 @@ def main(args=None):
         generate_main(opts)
     elif opts['plot']:
         plot_main(opts)
+    elif opts['info']:
+        info_main(opts)
 
 
 def interpol_main(opts):
@@ -272,6 +275,14 @@ def plot_point_main(opts):
 def plot_pdist_main(opts):
     pdist = np.load(opts['INPUT'])
     plot_pdist(pdist, opts['OUTPUT'])
+
+
+def info_main(opts):
+    points, values = read_ppp(opts['INPUT'])
+    box = Box.from_points(points)
+    print("Min:  {}".format(box.min_bound))
+    print("Max:  {}".format(box.max_bound))
+    print("Size: {}".format(box.size))
 
 
 if __name__ == '__main__':
