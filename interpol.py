@@ -59,6 +59,13 @@ def col_vector(val, dim):
     return np.ones((dim, 1)) * col_scalar(val)
 
 
+def _prep(points, values, widths):
+    points = np.asarray(points)
+    values = row_vector(values, points.shape[0])
+    widths = row_vector(widths, points.shape[0])
+    return points, values, widths
+
+
 #----------------------------------------
 # Gridding
 #----------------------------------------
@@ -225,9 +232,7 @@ def gaussian_filter_local_exact(grid, points, values, widths, radius,
 
 
 def local_linear_filter(grid, points, values, widths, radius, func):
-    points = np.asarray(points)
-    values = row_vector(values, points.shape[0])
-    widths = row_vector(widths, points.shape[0])
+    points, values, widths = _prep(points, values, widths)
     result = np.zeros(grid.shape)
     counts = np.zeros(grid.shape, dtype=int)
     for point, value, width in zip(points, values, widths):
@@ -248,9 +253,7 @@ def local_linear_filter(grid, points, values, widths, radius, func):
 def far_points__weighted_cumulative(
         grid, points, values, widths, radius, threshold=1/np.exp(2)):
 
-    points = np.asarray(points)
-    values = row_vector(values, points.shape[0])
-    widths = row_vector(widths, points.shape[0])
+    points, values, widths = _prep(points, values, widths)
 
     # place an normal distribution around each point with the radius weighted
     # by the corresponding intensity
@@ -268,9 +271,7 @@ def far_points__weighted_cumulative(
 def far_points__weighted_individual(
         grid, points, values, widths, radius, threshold=1):
 
-    points = np.asarray(points)
-    values = row_vector(values, points.shape[0])
-    widths = row_vector(widths, points.shape[0])
+    points, values, widths = _prep(points, values, widths)
 
     # place an ellipse around each point with the radius weighted by the
     # corresponding intensity
@@ -307,9 +308,7 @@ def generate_particle(pdist):
 
 def scatter(grid, points, values, widths, radius):
     """Generate a nice scatter plot."""
-    points = np.asarray(points)
-    values = row_vector(values, points.shape[0])
-    widths = row_vector(widths, points.shape[0])
+    points, values, widths = _prep(points, values, widths)
     # use `sum_(())` instead of `np.sum([])` to avoid huge memory bloat (!)
     return sum_(normal_distribution(grid, point, width*radius) * value
                 for point, value, width in zip(points, values, widths))
