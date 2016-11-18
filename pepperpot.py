@@ -82,16 +82,15 @@ def save_pdist(pdist, out_file=None):
 def plot_gauss_sum(grid_4d, points, values, widths, radius_4d):
     """Plot the 2D projections of a 4D particle scatter."""
     plt.clf()
-    for i, comb in enumerate(PLOTS_2D):
-        title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
-        ax = plt.subplot(2, 3, i+1)
-        ax.set_title(title)
-        # projected plot grid
-        ppoints = points[:,comb]
-        pgrid = Grid(grid_4d.box.projection(comb), 100)
-        with trace("Generate {} particle scatter".format(title)):
+    with trace('Gaussian sum "scatter" plot'):
+        for i, comb in enumerate(PLOTS_2D):
+            title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
+            ax = plt.subplot(2, 3, i+1)
+            ax.set_title(title)
+            # projected plot grid
+            ppoints = points[:,comb]
+            pgrid = Grid(grid_4d.box.projection(comb), 100)
             pdata = scatter(pgrid, ppoints, values, widths, radius_4d[comb])
-        with trace("Plotting {} particle scatter".format(title)):
             plot2d(pdata)
     plt.show()
 
@@ -99,14 +98,13 @@ def plot_gauss_sum(grid_4d, points, values, widths, radius_4d):
 def plot_pdist(pdist):
     """Plot the 2D projections of a 4D probability distribution matrix."""
     plt.clf()
-    for i, comb in enumerate(PLOTS_2D):
-        title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
-        ax = plt.subplot(2, 3, i+1)
-        ax.set_title(title)
-        with trace("Projecting pdist along {}".format(title)):
+    with trace("Plotting probability distribution"):
+        for i, comb in enumerate(PLOTS_2D):
+            title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
+            ax = plt.subplot(2, 3, i+1)
+            ax.set_title(title)
             along = set(range(4)) - set(comb)
             pdata = np.sum(pdist, axis=tuple(along))
-        with trace("Plotting pdist along   {}".format(title)):
             plot2d(pdata)
     plt.show()
 
