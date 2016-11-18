@@ -31,6 +31,8 @@ def main():
     pgrid = Grid(Box([0, 0], [1, 1]), 100)
     plot_radius = 0.05
     nozero_radius = 0.025
+    values = 1.
+    widths = 1.
 
     # grid for interpolation
     igrid = Grid(pgrid.box, 50)
@@ -52,10 +54,9 @@ def main():
             for i in range(500)
         ]) / (pgrid.shape - 1)
         values = np.ones(len(points))
-        widths = np.ones(len(points))
 
     with trace("Generating particle scatter"):
-        plotdata = scatter(pgrid, points, plot_radius)
+        plotdata = scatter(pgrid, points, values, widths, plot_radius)
 
     with trace("Plotting particle scatter"):
         plot2d(plotdata)
@@ -69,7 +70,7 @@ def main():
         zero_values = np.zeros(len(zero_points))
 
     with trace("Generating zeros scatter"):
-        plotdata = scatter(pgrid, zero_points, plot_radius)
+        plotdata = scatter(pgrid, zero_points, 1, 1, plot_radius)
 
     with trace("Plotting zeros scatter"):
         plot2d(plotdata)

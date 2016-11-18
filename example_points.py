@@ -34,9 +34,10 @@ def main():
 
     # show zeros
     plot = Grid(grid.box, grid.shape*10)
-    dist = scatter(plot, points, 0.2)
+    dist = scatter(plot, points, values, widths, 0.2)
     plot2d(dist).show()
-    dist = scatter(plot, points, 0.2) - scatter(plot, indiv, 0.1)
+    dist = (scatter(plot, points, values, widths, 0.2) -
+            scatter(plot, indiv,  values, widths, 0.1))
     plot2d(dist).show()
 
 

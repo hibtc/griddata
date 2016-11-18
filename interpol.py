@@ -305,8 +305,11 @@ def generate_particle(pdist):
 # Tools for the main
 #----------------------------------------
 
-def scatter(grid, points, radius):
+def scatter(grid, points, values, widths, radius):
     """Generate a nice scatter plot."""
+    points = np.asarray(points)
+    values = row_vector(values, points.shape[0])
+    widths = row_vector(widths, points.shape[0])
     # use `sum_(())` instead of `np.sum([])` to avoid huge memory bloat (!)
-    return sum_(normal_distribution(grid, point, radius)
-                for point in points)
+    return sum_(normal_distribution(grid, point, width*radius) * value
+                for point, value, width in zip(points, values, widths))

@@ -71,7 +71,7 @@ def save_pdist(pdist, out_file=None):
         np.save(out_file, pdist)
 
 
-def plot_scatter(points, grid_4d, radius_4d):
+def plot_gauss_sum(grid_4d, points, values, widths, radius_4d):
     """Plot the 2D projections of a 4D particle scatter."""
     plt.clf()
     for i, comb in enumerate(PLOTS_2D):
@@ -82,7 +82,7 @@ def plot_scatter(points, grid_4d, radius_4d):
         ppoints = points[:,comb]
         pgrid = Grid(grid_4d.box.projection(comb), 100)
         with trace("Generate {} particle scatter".format(title)):
-            pdata = scatter(pgrid, ppoints, radius_4d[comb])
+            pdata = scatter(pgrid, ppoints, values, widths, radius_4d[comb])
         with trace("Plotting {} particle scatter".format(title)):
             plot2d(pdata)
     plt.show()
