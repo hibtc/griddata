@@ -1,11 +1,54 @@
 """
-Analysis utils for some pepperpot data.
+Simple analysis utility for some pepperpot data.
 
 Usage:
-    pepperpot [OPTIONS] filename
+    pepperpot interpol zeros INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-z SHAPE]
+    pepperpot interpol gauss INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-w WIDTH]
+    pepperpot interpol arith INPUT OUTPUT [-r RADIUS] [-i SHAPE]
+    pepperpot generate INPUT [OUTPUT] [-n NUM] [-p PPP]
+    pepperpot plot gauss INPUT [OUTPUT] [-r RADIUS] [-g SHAPE]
+    pepperpot plot point INPUT [OUTPUT] [-r RADIUS]
+    pepperpot plot pdist INPUT [OUTPUT]
     pepperpot (-h | -v)
 
-Options:
+Arguments:
+    INPUT
+
+Interpolation options:
+    -r RADIUS, --radius RADIUS      Radius for averaging [default: 2,2,4,4]
+    -i SHAPE, --igrid SHAPE         Interpolation grid shape [default: 25]
+    -z SHAPE, --zgrid SHAPE         Zero (helper) grid shape [default: 15]
+    -w WIDTH, --width WIDTH         Decay width [default: 1]
+
+Particle generation options:
+    -n NUM, --number NUM            Number of particles to generate [default: 500]
+    -p FILE, --pepperpot FILE       Pepperpot file for normalizing the grid size
+
+Plot options:
+    -g SHAPE, --grid SHAPE          Plot grid shape [default: 25]
+    radius                          Point radius [default: 2,2,4,4]
+
+Interpolation commands:
+    zeros       Add zeros based on proximity interpolate using `griddata`
+    gauss       Gaussian average
+    arith       Arithmetic average
+
+Interpolation arguments:
+    INPUT       Pepperpot measurements (.ppp)
+    OUTPUT      Probability distribution (.npy)
+
+Particle generation arguments:
+    INPUT       Probability distribution (.npy)
+    OUTPUT      Particles list (.txt)
+
+Plot commands:
+    gauss       Plot a scaled normal distribution around each point
+    point       Simple scatter plot
+    pdist       Plot a 2D probability distribution
+
+Plot arguments:
+    INPUT       Pepperpot (.ppp) or probability distribution (.npy)
+    OUTPUT      Plot file (.pdf)
 """
 
 from __future__ import absolute_import
@@ -27,6 +70,8 @@ from interpol import (
     Grid, Box, far_points__weighted_cumulative,
     scatter, generate_particle,
     restrict_to_polytope,
+    moving_average,
+    gaussian_filter_local_exact,
 )
 
 
@@ -41,6 +86,19 @@ def get_columns(array, columns):
         return block.view(np.float64).reshape(block.shape + (-1,))
     else:
         return array[columns]
+
+
+def scalar_or_vector(value, parse):
+    if ',' in value:
+        return np.array([parse(x) for x in value.split(',')])
+    return parse(value)
+
+
+def savefig(fig, filename):
+    if filename:
+        fig.savefig(filename)
+    else:
+        fig.show()
 
 
 def read_ppp(in_file):
@@ -71,15 +129,15 @@ def interpolate_pdist(points, values, widths, igrid, zgrid, radius):
         return pdist.reshape(igrid.shape)
 
 
-def save_pdist(pdist, out_file=None):
+def save_pdist(pdist, out_file=None, method=''):
     """Save a probability distribution matrix to a file."""
     if out_file is None:
-        out_file = tempfile.mktemp(prefix='pdist_', dir='.')
+        out_file = tempfile.mktemp(prefix='pdist_{}_'.format(method), dir='.')
     with trace("Saving probability distribution to: {}".format(out_file)):
         np.save(out_file, pdist)
 
 
-def plot_gauss_sum(grid_4d, points, values, widths, radius_4d):
+def plot_gauss_sum(grid_4d, points, values, widths, radius_4d, filename):
     """Plot the 2D projections of a 4D particle scatter."""
     plt.clf()
     with trace('Gaussian sum "scatter" plot'):
@@ -92,10 +150,10 @@ def plot_gauss_sum(grid_4d, points, values, widths, radius_4d):
             pgrid = Grid(grid_4d.box.projection(comb), 100)
             pdata = scatter(pgrid, ppoints, values, widths, radius_4d[comb])
             plot2d(pdata)
-    plt.show()
+    savefig(plt, filename)
 
 
-def plot_pdist(pdist):
+def plot_pdist(pdist, filename):
     """Plot the 2D projections of a 4D probability distribution matrix."""
     plt.clf()
     with trace("Plotting probability distribution"):
@@ -106,29 +164,113 @@ def plot_pdist(pdist):
             along = set(range(4)) - set(comb)
             pdata = np.sum(pdist, axis=tuple(along))
             plot2d(pdata)
-    plt.show()
+    savefig(plt, filename)
 
 
-def main():
+def plot_scatter(points, radius, filename):
+    plt.clf()
+    with trace("Plotting particle scatter"):
+        for i, comb in enumerate(PLOTS_2D):
+            title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
+            ax = plt.subplot(2, 3, i+1)
+            ax.set_title(title)
+            x, y = points[:,comb].T
+            plt.scatter(x, y, radius)
+    savefig(plt, filename)
 
-    points, values = read_ppp(in_file)
-    widths = 1
+
+def main(args=None):
+    opts = docopt(__doc__, args)
+    if opts['interpol']:
+        interpol_main(opts)
+    elif opts['generate']:
+        generate_main(opts)
+    elif opts['plot']:
+        plot_main(opts)
+
+
+def interpol_main(opts):
+
+    points, values = read_ppp(opts['INPUT'])
+    widths = float(opts['--width'])
+    radius = scalar_or_vector(opts['--radius'], float)
+    igrid_shape = scalar_or_vector(opts['--igrid'], int)
+    zgrid_shape = scalar_or_vector(opts['--zgrid'], int)
 
     # grid for interpolation:
-    # 25
-    zgrid = Grid(Box.from_points(points), 15)
-    igrid = Grid(zgrid.box, 15)
+    data_box = Box.from_points(points)
+    igrid = Grid(data_box, igrid_shape)
 
-    # box size for averaging = 2 mm | 4 mrad
-    #radius = np.array([2., 2., 4., 4.])
-    radius = np.array([4., 4., 6., 6.])
+    methods = ['zeros', 'arith', 'gauss']
+    for method in methods:
+        if opts[method]:
+            break
 
-    plot_scatter(points, igrid, radius)
+    if method == 'zeros':
+        zgrid = Grid(data_box, zgrid_shape)
+        pdist = interpolate_pdist(points, values, widths, igrid, zgrid, radius)
 
-    pdist = interpolate_pdist(points, values, widths, igrid, zgrid, radius)
-    save_pdist(pdist, out_file)
-    plot_pdist(pdist)
+    elif method == 'arith':
+        pdist = moving_average(
+            igrid, points, values, widths, radius)
+
+    elif method == 'gauss':
+        pdist = gaussian_filter_local_exact(
+            igrid, points, values, widths, radius)
+
+    save_pdist(pdist, opts['OUTPUT'], method)
+
+
+def generate_main(opts):
+    pdist = np.load(opts['INPUT'])
+    count = int(opts['--number'])
+    with trace("Generating {} particles".format(count)):
+        particles = np.array([
+            generate_particle(pdist)
+            for i in range(count)
+        ])
+    if opts['--pepperpot']:
+        points, values = read_ppp(opts['--pepperpot'])
+        box = Box.from_points(points)
+        scale = box.size / np.array(pdist.shape)
+        particles = particles * scale + box.min_bound
+
+    particles = np.hstack((particles, np.ones((len(particles), 1))))
+
+    output = opts['OUTPUT'] or sys.stdout
+    np.savetxt(output, particles,
+               header='x y xprime yprime weight')
+
+
+def plot_main(opts):
+    if opts['gauss']:
+        plot_gauss_main(opts)
+    elif opts['point']:
+        plot_point_main(opts)
+    elif opts['pdist']:
+        plot_pdist_main(opts)
+
+
+def plot_gauss_main(opts):
+    points, values = read_ppp(opts['INPUT'])
+    widths = 1
+    radius = scalar_or_vector(opts['--radius'], float)
+    shape = scalar_or_vector(opts['--grid'], int)
+    bounds = Box.from_points(points)
+    grid = Grid(bounds, shape)
+    plot_gauss_sum(grid, points, values, widths, radius, opts['OUTPUT'])
+
+
+def plot_point_main(opts):
+    points, values = read_ppp(opts['INPUT'])
+    radius = scalar_or_vector(opts['--radius'], float)
+    plot_scatter(points, radius, opts['OUTPUT'])
+
+
+def plot_pdist_main(opts):
+    pdist = np.load(opts['INPUT'])
+    plot_pdist(pdist, opts['OUTPUT'])
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
