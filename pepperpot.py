@@ -65,9 +65,11 @@ import scipy.spatial
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from docopt import docopt
 
-from util import plot2d, trace
+from util import trace
 from interpol import (
     Grid, Box, far_points__weighted_cumulative,
     scatter, generate_particle_interpol,
@@ -98,7 +100,7 @@ def scalar_or_vector(value, parse):
 
 def savefig(fig, filename):
     if filename:
-        fig.savefig(filename)
+        fig.savefig(filename, bbox_inches='tight')
     else:
         fig.show()
 
@@ -139,34 +141,52 @@ def save_pdist(pdist, out_file=None, method=''):
         np.save(out_file, pdist)
 
 
-def plot_gauss_sum(grid_4d, points, values, widths, radius_4d, filename):
-    """Plot the 2D projections of a 4D particle scatter."""
-    plt.clf()
-    with trace('Gaussian sum "scatter" plot'):
+def plot_2d_projections(message, func, box_4d=None, filename=None,
+                        width=0.7, height=0.5, hspace=0.1, vspace=0.1):
+    fig = plt.figure()
+    with trace(message):
         for i, comb in enumerate(PLOTS_2D):
             title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
-            ax = plt.subplot(2, 3, i+1)
+            # compute image data
+            image = np.array(func(comb))
+            # add axes
+            row, col = i // 3, i % 3
+            ax = fig.add_axes([
+                col*(width-hspace),
+                row*(height+vspace),
+                width, height])
             ax.set_title(title)
-            # projected plot grid
-            ppoints = points[:,comb]
-            pgrid = Grid(grid_4d.box.projection(comb), 100)
-            pdata = scatter(pgrid, ppoints, values, widths, radius_4d[comb])
-            plot2d(pdata)
-    savefig(plt, filename)
+            # plot image
+            extent = box_4d and box_4d.projection(comb).lrbt()
+            im = ax.imshow(image, extent=extent, cmap="viridis")
+            # add colorbar that fits the image size
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            fig.colorbar(im, orientation='vertical', cax=cax)
+    savefig(fig, filename)
+
+
+def plot_gauss_sum(grid_4d, points, values, widths, radius_4d, filename):
+    """Plot the 2D projections of a 4D particle scatter."""
+    def gauss(comb):
+        ppoints = points[:,comb]
+        pgrid = Grid(grid_4d.box.projection(comb), grid_4d.shape[comb])
+        data = scatter(pgrid, ppoints, values, widths, radius_4d[comb])
+        return data / np.max(data)
+    plot_2d_projections(
+        'Gaussian sum "scatter" plot',
+        gauss, grid_4d.box, filename)
 
 
 def plot_pdist(pdist, filename):
     """Plot the 2D projections of a 4D probability distribution matrix."""
-    plt.clf()
-    with trace("Plotting probability distribution"):
-        for i, comb in enumerate(PLOTS_2D):
-            title = '{}/{}'.format(*(COL_TITLES[c] for c in comb))
-            ax = plt.subplot(2, 3, i+1)
-            ax.set_title(title)
-            along = set(range(4)) - set(comb)
-            pdata = np.sum(pdist, axis=tuple(along))
-            plot2d(pdata)
-    savefig(plt, filename)
+    all_axes = set(range(4))
+    def plot_pdist(comb):
+        data = np.sum(pdist, axis=tuple(all_axes - set(comb)))
+        return data / np.max(data)
+    plot_2d_projections(
+        'Plotting probability distribution',
+        gauss, None, filename)
 
 
 def plot_scatter(points, radius, filename):

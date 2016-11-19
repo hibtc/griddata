@@ -42,9 +42,7 @@ def main():
     with trace("Generate probability distribution"):
         orig_pdist = np.fromfunction(mysterious_prob_dist, pgrid.shape)
 
-    with trace("Plotting probability distribution"):
-        plot2d(orig_pdist)
-    plt.show()
+    plot2d(pgrid, orig_pdist)
 
     # particle scatter
 
@@ -58,9 +56,7 @@ def main():
     with trace("Generating particle scatter"):
         plotdata = scatter(pgrid, points, values, widths, plot_radius)
 
-    with trace("Plotting particle scatter"):
-        plot2d(plotdata)
-    plt.show()
+    plot2d(pgrid, plotdata)
 
     # zeros scatter
 
@@ -72,9 +68,7 @@ def main():
     with trace("Generating zeros scatter"):
         plotdata = scatter(pgrid, zero_points, 1, 1, plot_radius)
 
-    with trace("Plotting zeros scatter"):
-        plot2d(plotdata)
-    plt.show()
+    plot2d(pgrid, plotdata)
 
     # without zeros
 
@@ -83,9 +77,7 @@ def main():
             points, values,
             pgrid.xi(), fill_value=0)
 
-    with trace("Plotting interpolation without zeros"):
-        plot2d(interpolate_naive.reshape(pgrid.shape))
-    plt.show()
+    plot2d(pgrid, interpolate_naive)
 
     # with zeros
 
@@ -95,9 +87,7 @@ def main():
             np.hstack((values, zero_values)),
             pgrid.xi(), fill_value=0)
 
-    with trace("Plotting interpolation with zeros"):
-        plot2d(interpolate_zeros.reshape(pgrid.shape))
-    plt.show()
+    plot2d(pgrid, interpolate_zeros)
 
 
 if __name__ == '__main__':

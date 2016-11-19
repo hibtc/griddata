@@ -110,6 +110,12 @@ class Box(object):
     def volume(self):
         return np.product(self.size)
 
+    def lrbt(self):
+        return (self.min_bound[1],
+                self.max_bound[1],
+                self.min_bound[0],
+                self.max_bound[0])
+
 
 class Grid(object):
 
