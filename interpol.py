@@ -258,39 +258,32 @@ def local_linear_filter(grid, points, values, widths, radius, func):
     result[region] /= counts[region]
     return result
 
+
 #----------------------------------------
 # Find regions that are far away from any measured points
 #----------------------------------------
 
 def far_points__weighted_cumulative(
         grid, points, values, widths, radius, threshold=1/np.exp(2)):
-
     points, values, widths = _prep(points, values, widths)
-
     # place an normal distribution around each point with the radius weighted
     # by the corresponding intensity
     dists = (normal_distribution(grid, point, width*radius) * value
              for point, value, width in zip(points, values, widths))
-
     # sum up contributions
     zero_mask = sum_(dists) < threshold
-
     return grid.index_to_point(where(zero_mask))
 
 
 def far_points__weighted_individual(
         grid, points, values, widths, radius, threshold=1):
-
     points, values, widths = _prep(points, values, widths)
-
     # place an ellipse around each point with the radius weighted by the
     # corresponding intensity
     dists = (elliptic_distance(grid, point, width*radius) / value
              for point, value, width in zip(points, values, widths))
-
     # generate masks for individual points and compute their disjunction
     zero_mask = product_(d > threshold for d in dists)
-
     return grid.index_to_point(where(zero_mask))
 
 
