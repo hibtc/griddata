@@ -66,8 +66,6 @@ import scipy.spatial
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from docopt import docopt
 
 from util import trace
@@ -169,7 +167,7 @@ def load_pdist(in_file):
 
 
 def plot_2d_projections(message, func, box_4d=None, filename=None,
-                        width=0.7, height=0.5, hspace=0.1, vspace=0.1):
+                        width=0.5, height=0.5, hspace=0.05, vspace=0.1):
     fig = plt.figure()
     with trace(message):
         for i, comb in enumerate(PLOTS_2D):
@@ -179,17 +177,15 @@ def plot_2d_projections(message, func, box_4d=None, filename=None,
             # add axes
             row, col = i // 3, i % 3
             ax = fig.add_axes([
-                col*(width-hspace),
+                col*(width+hspace),
                 row*(height+vspace),
                 width, height])
             ax.set_title(title)
             # plot image
             extent = box_4d and box_4d.projection(comb).lrbt()
-            im = ax.imshow(image, extent=extent, cmap="viridis")
+            im = ax.imshow(image, extent=extent, cmap="viridis", aspect='auto')
             # add colorbar that fits the image size
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            fig.colorbar(im, orientation='vertical', cax=cax)
+            fig.colorbar(im, orientation='vertical')
     savefig(fig, filename)
 
 
