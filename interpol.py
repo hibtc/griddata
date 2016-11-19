@@ -311,32 +311,38 @@ def generate_particle(pdist):
     return result
 
 
-def generate_particle_interpol(pdist, slices, box=None):
+def generate_particle_interpol(pdist, jitter, box=None):
+    """
+    subdivs is for jitter / fine-tuning of x value.
+    """
     pdist_shape = pdist.shape
-    slices = array_toint(row_vector(slices, pdist.ndim))
+    jitter = array_toint(row_vector(jitter, pdist.ndim))
     result = np.empty(0, dtype=int)
-    for wanted_divs, known_divs in zip(slices, pdist.shape):
+    for subdivs in jitter:
         # determine probabilities for finding a particular value of X, where X
         # is the first left-over dimension in the probability distribution:
         yz_axes = tuple(range(1, pdist.ndim))
         x_weights = np.sum(pdist, axis=yz_axes)
         x_pdist = x_weights / np.sum(x_weights)
         # generate value for X and append to result coordinate vector:
-        x_choice = np.random.choice(known_divs, p=x_pdist)
+        x_choice = np.random.choice(len(x_pdist), p=x_pdist)
         # restrict probability distribution to the given case:
         pdist = pdist[x_choice]
 
+        # TODO: use non-discrete interpolation here:
+
         # fine-tune value of x
-        yi = x_weights[max(x_choice-1, 0):
-                       min(x_choice+2, known_divs)]
-        xi = range(len(yi))
-        x_fine = np.linspace(0, xi[-1], wanted_divs)
+        # NOTE: extrapolating (!!) via boundary condition `p=0`:
+        x_pdist = np.hstack((0, x_pdist, 0))
+        yi = x_pdist[x_choice-1:x_choice+1]
+        xi = [-1, 0, 1]
+        x_fine = np.linspace(-0.5, +0.5-(1.0/subdivs), subdivs)
         interp = np.interp(x_fine, xi, yi)
         interp /= np.sum(interp)
-        x = np.random.choice(wanted_divs, p=interp)
-        result = np.hstack((result, x_choice*wanted_divs + x))
+        x = np.random.choice(subdivs, p=interp)
+        result = np.hstack((result, x_choice*subdivs + x))
     if box:
-        scale = box.size / (slices * np.array(pdist_shape))
+        scale = box.size / (jitter * np.array(pdist_shape))
         result = result * scale + box.min_bound
     return result
 
