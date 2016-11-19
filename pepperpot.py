@@ -130,7 +130,7 @@ def interpolate_pdist(points, values, widths, igrid, zgrid, radius):
             np.vstack((points, zero_points)),
             np.hstack((values, zero_values)),
             igrid.xi(), fill_value=0)
-        return pdist.reshape(igrid.shape)
+        return pdist.clip(min=0).reshape(igrid.shape)
 
 
 def save_pdist(pdist, out_file=None, method=''):
