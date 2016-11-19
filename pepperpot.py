@@ -5,7 +5,7 @@ Usage:
     pepperpot interpol zeros INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-z SHAPE]
     pepperpot interpol gauss INPUT OUTPUT [-r RADIUS] [-i SHAPE] [-w WIDTH]
     pepperpot interpol arith INPUT OUTPUT [-r RADIUS] [-i SHAPE]
-    pepperpot generate INPUT [OUTPUT] [-n NUM] [-p PPP] [-g SHAPE]
+    pepperpot generate INPUT [OUTPUT] [-n NUM] [-g SHAPE]
     pepperpot plot gauss INPUT [OUTPUT] [-r RADIUS] [-g SHAPE]
     pepperpot plot point INPUT [OUTPUT] [-r RADIUS]
     pepperpot plot pdist INPUT [OUTPUT]
@@ -59,6 +59,7 @@ from __future__ import division
 
 import tempfile
 import sys
+import os
 
 import numpy as np
 import scipy.spatial
@@ -82,6 +83,9 @@ from interpol import (
 COL_TITLES = ('x', 'y', 'px', 'py')
 PLOTS_2D = ([0, 1], [0, 2], [1, 3],
             [2, 3], [0, 3], [1, 2])
+
+# for PPP file:
+COL_NAMES = ('x', 'y', 'xprime', 'yprime', 'weight')
 
 
 def get_columns(array, columns):
@@ -107,9 +111,19 @@ def savefig(fig, filename):
 
 def read_ppp(in_file):
     rawdata = np.genfromtxt(in_file, names=True)
-    points = get_columns(rawdata, ['x', 'y', 'xprime', 'yprime'])
-    values = get_columns(rawdata, 'weight')
+    points = get_columns(rawdata, list(COL_NAMES[:4]))
+    if 'weight' in rawdata.dtype.names:
+        values = get_columns(rawdata, 'weight')
+    else:
+        values = np.ones(len(points))
     return points, values
+
+
+def save_ppp(filename, points):
+    points = np.asarray(points)
+    columns = COL_NAMES[:points.shape[1]]
+    np.savetxt(filename, points,
+               header=' '.join(columns))
 
 
 def interpolate_pdist(points, values, widths, igrid, zgrid, radius):
@@ -133,12 +147,25 @@ def interpolate_pdist(points, values, widths, igrid, zgrid, radius):
         return pdist.clip(min=0).reshape(igrid.shape)
 
 
-def save_pdist(pdist, out_file=None, method=''):
+def save_pdist(box, pdist, out_file=None, method=''):
     """Save a probability distribution matrix to a file."""
     if out_file is None:
         out_file = tempfile.mktemp(prefix='pdist_{}_'.format(method), dir='.')
+    base, ext = os.path.splitext(out_file)
+    meta_file = base + '.meta'
+    meta = [box.min_bound,
+            box.max_bound]
     with trace("Saving probability distribution to: {}".format(out_file)):
         np.save(out_file, pdist)
+        save_ppp(meta_file, meta)
+
+
+def load_pdist(in_file):
+    pdist = np.load(in_file)
+    base, ext = os.path.splitext(in_file)
+    meta, _ = read_ppp(base + '.meta')
+    box = Box.from_points(meta)
+    return pdist, box
 
 
 def plot_2d_projections(message, func, box_4d=None, filename=None,
@@ -178,15 +205,15 @@ def plot_gauss_sum(grid_4d, points, values, widths, radius_4d, filename):
         gauss, grid_4d.box, filename)
 
 
-def plot_pdist(pdist, filename):
+def plot_pdist(pdist, filename, box=None):
     """Plot the 2D projections of a 4D probability distribution matrix."""
     all_axes = set(range(4))
-    def plot_pdist(comb):
+    def trace(comb):
         data = np.sum(pdist, axis=tuple(all_axes - set(comb)))
         return data / np.max(data)
     plot_2d_projections(
         'Plotting probability distribution',
-        gauss, None, filename)
+        trace, box, filename)
 
 
 def plot_scatter(points, radius, filename):
@@ -244,29 +271,23 @@ def interpol_main(opts):
             pdist = gaussian_filter_local_exact(
                 igrid, points, values, widths, radius)
 
-    save_pdist(pdist, opts['OUTPUT'], method)
+    save_pdist(igrid.box, pdist, opts['OUTPUT'], method)
 
 
 def generate_main(opts):
-    pdist = np.load(opts['INPUT'])
+    pdist, box = load_pdist(opts['INPUT'])
     shape = scalar_or_vector(opts['--grid'], int)
     count = int(opts['--number'])
     with trace("Generating {} particles".format(count)):
         particles = np.array([
-            generate_particle_interpol(pdist, shape)
+            generate_particle_interpol(pdist, shape, box)
             for i in range(count)
         ])
-    if opts['--pepperpot']:
-        points, values = read_ppp(opts['--pepperpot'])
-        box = Box.from_points(points)
-        scale = box.size / (np.array(shape) * np.array(pdist.shape))
-        particles = particles * scale + box.min_bound
 
     particles = np.hstack((particles, np.ones((len(particles), 1))))
 
     output = opts['OUTPUT'] or sys.stdout
-    np.savetxt(output, particles,
-               header='x y xprime yprime weight')
+    save_ppp(output, particles)
 
 
 def plot_main(opts):
@@ -295,8 +316,8 @@ def plot_point_main(opts):
 
 
 def plot_pdist_main(opts):
-    pdist = np.load(opts['INPUT'])
-    plot_pdist(pdist, opts['OUTPUT'])
+    pdist, box = load_pdist(opts['INPUT'])
+    plot_pdist(pdist, opts['OUTPUT'], box)
 
 
 def info_main(opts):

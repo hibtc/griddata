@@ -311,7 +311,8 @@ def generate_particle(pdist):
     return result
 
 
-def generate_particle_interpol(pdist, slices):
+def generate_particle_interpol(pdist, slices, box=None):
+    pdist_shape = pdist.shape
     slices = array_toint(row_vector(slices, pdist.ndim))
     result = np.empty(0, dtype=int)
     for wanted_divs, known_divs in zip(slices, pdist.shape):
@@ -334,6 +335,9 @@ def generate_particle_interpol(pdist, slices):
         interp /= np.sum(interp)
         x = np.random.choice(wanted_divs, p=interp)
         result = np.hstack((result, x_choice*wanted_divs + x))
+    if box:
+        scale = box.size / (slices * np.array(pdist_shape))
+        result = result * scale + box.min_bound
     return result
 
 
