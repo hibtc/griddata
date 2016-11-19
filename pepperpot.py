@@ -235,12 +235,14 @@ def interpol_main(opts):
         pdist = interpolate_pdist(points, values, widths, igrid, zgrid, radius)
 
     elif method == 'arith':
-        pdist = moving_average(
-            igrid, points, values, widths, radius)
+        with trace("Computing arithmetic average"):
+            pdist = moving_average(
+                igrid, points, values, widths, radius)
 
     elif method == 'gauss':
-        pdist = gaussian_filter_local_exact(
-            igrid, points, values, widths, radius)
+        with trace("Computing gaussian average"):
+            pdist = gaussian_filter_local_exact(
+                igrid, points, values, widths, radius)
 
     save_pdist(pdist, opts['OUTPUT'], method)
 
