@@ -9,6 +9,7 @@ from __future__ import division
 import itertools
 import functools
 import operator
+import bisect
 
 import numpy as np
 import scipy.ndimage
@@ -60,6 +61,10 @@ def col_vector(val, dim):
 
 def array_toint(val):
     return np.asarray(val, dtype=int)
+
+
+def hstack(*args):
+    return np.hstack(args)
 
 
 def _prep(points, values, widths):
@@ -311,40 +316,72 @@ def generate_particle(pdist):
     return result
 
 
-def generate_particle_interpol(pdist, jitter, box=None):
-    """
-    subdivs is for jitter / fine-tuning of x value.
-    """
-    pdist_shape = pdist.shape
-    jitter = array_toint(row_vector(jitter, pdist.ndim))
-    result = np.empty(0, dtype=int)
-    for subdivs in jitter:
-        # determine probabilities for finding a particular value of X, where X
-        # is the first left-over dimension in the probability distribution:
-        yz_axes = tuple(range(1, pdist.ndim))
-        x_weights = np.sum(pdist, axis=yz_axes)
-        x_pdist = x_weights / np.sum(x_weights)
-        # generate value for X and append to result coordinate vector:
-        x_choice = np.random.choice(len(x_pdist), p=x_pdist)
-        # restrict probability distribution to the given case:
-        pdist = pdist[x_choice]
+def slices(array, index):
+    for i, v in enumerate(index):
+        along_i_axis = list(index)
+        along_i_axis[i] = slice(None)
+        yield array[along_i_axis], v
 
-        # TODO: use non-discrete interpolation here:
 
-        # fine-tune value of x
+def jitter(pdist, x_discrete):
+    x = [-1, 0, +1]
+    return [
+        v + random_linear_interpolate_interval(x, p_nearest, -0.5, +0.5)
+        for pdist_i, v in slices(pdist, x_discrete)
         # NOTE: extrapolating (!!) via boundary condition `p=0`:
-        x_pdist = np.hstack((0, x_pdist, 0))
-        yi = x_pdist[x_choice-1:x_choice+1]
-        xi = [-1, 0, 1]
-        x_fine = np.linspace(-0.5, +0.5-(1.0/subdivs), subdivs)
-        interp = np.interp(x_fine, xi, yi)
-        interp /= np.sum(interp)
-        x = np.random.choice(subdivs, p=interp)
-        result = np.hstack((result, x_choice*subdivs + x))
-    if box:
-        scale = box.size / (jitter * np.array(pdist_shape))
-        result = result * scale + box.min_bound
-    return result
+        for p_nearest in [hstack(0, pdist_i, 0)[v:v+3]]
+    ]
+
+
+def random_linear_interpolate_interval(x, y, x_a, x_b):
+    """
+    Return a random value in the range `[x_a, x_b)` based on linear
+    interpolation of the probabilities `y` at locations `x`. `x` must be
+    sorted.
+    """
+    m = lambda i: (y[i+1]-y[i])/(x[i+1]-x[i])
+    i_a = bisect.bisect_right(x, x_a)
+    i_b = bisect.bisect_left(x, x_b, i_a)
+    p_a = m(i_a-1) * (x_a - x[i_a-1]) + y[i_a-1]
+    p_b = m(i_b-1) * (x_b - x[i_b-1]) + y[i_b-1]
+    x = hstack(x_a, x[i_a:i_b], x_b)
+    y = hstack(p_a, y[i_a:i_b], p_b)
+    return random_linear_interpolate(x, y)
+
+
+def random_linear_interpolate(x, y):
+    """
+    Sample a random number from the interval [x0, xN) by interpolating
+    linearly between N supporting points (x, y) of the probability density
+    function. The probability does not need to be normalized.
+    """
+    x = np.array(x)
+    y = np.array(y)
+    # probabability for the random number to be in the i'th interval:
+    p_i = (y[1:] + y[:-1]) * (x[1:] - x[:-1]) / 2
+    # cumulative probability for the random number to be in the i'th interval
+    cum_i = hstack(0, np.cumsum(p_i))
+    cum_i_norm = cum_i[-1]
+    # choose a position within our total probability weight
+    p_integral = np.random.uniform(0, cum_i_norm)
+    # find the interval
+    i = np.searchsorted(cum_i, p_integral, 'right') - 1
+    # coordinates of the selected interval
+    x0, x1 = x[i:i+2]
+    y0, y1 = y[i:i+2]
+    # linearly interpolate the 1D probability density function (pdf) in the
+    # interval [i, i+1), from now on, we assume that
+    pdf_i = [(y1-y0)/(x1-x0), y0]
+    # integrate to get the cumulative distribution function (cdf):
+    cdf_i = np.polyint(pdf_i)
+    cdf_i_norm = np.polyval(cdf_i, x1-x0)
+    # position within interval
+    p_integral_i = (p_integral - cum_i[i]) / p_i[i] * cdf_i_norm
+    # (c=0, but we keep it anyway)
+    a, b, c = cdf_i
+    if np.isclose(a, 0):
+        return x0 + (p_integral_i - c) / b
+    return x0 + (-b + (b**2 - 4*a*(c-p_integral_i))**0.5) / (2*a)
 
 
 #----------------------------------------

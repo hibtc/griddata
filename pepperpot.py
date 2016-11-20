@@ -71,7 +71,7 @@ from docopt import docopt
 from util import trace
 from interpol import (
     Grid, Box, far_points__weighted_cumulative,
-    scatter, generate_particle_interpol,
+    scatter, generate_particle, jitter,
     restrict_to_polytope,
     moving_average,
     gaussian_filter_local_exact,
@@ -276,7 +276,8 @@ def generate_main(opts):
     count = int(opts['--number'])
     with trace("Generating {} particles".format(count)):
         particles = np.array([
-            generate_particle_interpol(pdist, shape, box)
+            Grid(box, pdist.shape).index_to_point(
+                jitter(pdist, generate_particle(pdist)))
             for i in range(count)
         ])
 
