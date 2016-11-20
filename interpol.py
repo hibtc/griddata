@@ -324,12 +324,13 @@ def slices(array, index):
 
 
 def jitter(pdist, x_discrete):
-    x = [-1, 0, +1]
+    x = [-0.5, 0, +0.5]
     return [
-        v + random_linear_interpolate_interval(x, p_nearest, -0.5, +0.5)
+        v + random_linear_interpolate(x, pn)
         for pdist_i, v in slices(pdist, x_discrete)
         # NOTE: extrapolating (!!) via boundary condition `p=0`:
-        for p_nearest in [hstack(0, pdist_i, 0)[v:v+3]]
+        for p in [hstack(0, pdist_i, 0)[v:v+3]]
+        for pn in [[(p[0]+p[1])/2, p[1], (p[1]+p[2])/2]]
     ]
 
 
