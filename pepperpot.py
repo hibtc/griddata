@@ -104,7 +104,7 @@ def savefig(fig, filename):
     if filename:
         fig.savefig(filename, bbox_inches='tight')
     else:
-        fig.show()
+        plt.show()
 
 
 def read_ppp(in_file):
@@ -168,6 +168,7 @@ def load_pdist(in_file):
 
 def plot_2d_projections(message, func, box_4d=None, filename=None,
                         width=0.5, height=0.5, hspace=0.05, vspace=0.1):
+    topmost_row = (len(PLOTS_2D)-1) // 3
     fig = plt.figure()
     with trace(message):
         for i, comb in enumerate(PLOTS_2D):
@@ -176,6 +177,7 @@ def plot_2d_projections(message, func, box_4d=None, filename=None,
             image = np.array(func(comb))
             # add axes
             row, col = i // 3, i % 3
+            row = topmost_row - row
             ax = fig.add_axes([
                 col*(width+hspace),
                 row*(height+vspace),
