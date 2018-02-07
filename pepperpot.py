@@ -88,8 +88,7 @@ COL_NAMES = ('x', 'y', 'xprime', 'yprime', 'weight')
 
 def get_columns(array, columns):
     if isinstance(columns, list):
-        block = array[columns]
-        return block.view(np.float64).reshape(block.shape + (-1,))
+        return np.array([array[c] for c in columns]).T
     else:
         return array[columns]
 
