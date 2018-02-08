@@ -13,8 +13,8 @@ import numpy as np
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
-from util import plot2d, trace
-from interpol import (
+from interpol.util import plot2d, trace
+from interpol.interpol import (
     Grid, Box, far_points__weighted_cumulative,
     scatter, generate_particle,
 )

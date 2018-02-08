@@ -20,10 +20,10 @@ setup(
     maintainer_email='t_glaessle@gmx.de',
     url='https://github.com/hibtc/interpol',
     license='GPLv3+',
-    py_modules=['interpol', 'pepperpot', 'util'],
+    packages=['interpol'],
     entry_points={
         'console_scripts': [
-            'pepperpot = pepperpot:main'
+            'pepperpot = interpol.pepperpot:main'
         ]
     },
     install_requires=[

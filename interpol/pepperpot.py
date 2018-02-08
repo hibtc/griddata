@@ -68,8 +68,8 @@ import matplotlib.pyplot as plt
 
 from docopt import docopt
 
-from util import trace
-from interpol import (
+from .util import trace
+from .interpol import (
     Grid, Box, far_points__weighted_cumulative,
     scatter, generate_particle, jitter,
     restrict_to_polytope,

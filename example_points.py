@@ -7,8 +7,8 @@ from __future__ import unicode_literals
 
 import numpy as np
 
-from util import plot2d
-from interpol import (
+from interpol.util import plot2d
+from interpol.interpol import (
     Grid, Box, scatter,
     far_points__weighted_cumulative,
     far_points__weighted_individual,
