@@ -184,7 +184,8 @@ def plot_2d_projections(message, func, box_4d=None, filename=None,
             ax.set_title(title)
             # plot image
             extent = box_4d and box_4d.projection(comb).lrbt()
-            im = ax.imshow(image, extent=extent, cmap="viridis", aspect='auto')
+            im = ax.imshow(image.T, origin='lowor',
+                           extent=extent, cmap="viridis", aspect='auto')
             # add colorbar that fits the image size
             fig.colorbar(im, orientation='vertical')
     savefig(fig, filename)
