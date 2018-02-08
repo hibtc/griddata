@@ -208,6 +208,8 @@ def plot_pdist(pdist, filename, box=None):
     all_axes = set(range(4))
     def trace(comb):
         data = np.sum(pdist, axis=tuple(all_axes - set(comb)))
+        if comb[0] > comb[1]:
+            data = data.T
         return data / np.max(data)
     plot_2d_projections(
         'Plotting probability distribution',
