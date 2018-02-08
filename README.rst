@@ -9,32 +9,40 @@ Simple CLI tools for analysis of pepperpot files:
 - plotting particles or the probability distribution
 
 
+Setup
+~~~~~
+
+Install in development mode::
+
+    python setup.py develop
+
+
 Usage
 ~~~~~
 
 Interpolation::
 
-    python pepperpot.py interpol gauss emidata.ppp pdist_gauss.npy
+    pepperpot interpol gauss emidata.ppp pdist_gauss.npy
 
 Particle generation::
 
-    python pepperpot.py generate pdist_gauss.npy particles_gauss.txt -n 500
+    pepperpot generate pdist_gauss.npy particles_gauss.txt -n 500
 
 Plotting the original data::
 
-    python pepperpot.py plot point emidata.ppp scatter_emidata.pdf
-    python pepperpot.py plot gauss emidata.ppp normsum_emidata.pdf
+    pepperpot plot point emidata.ppp scatter_emidata.pdf
+    pepperpot plot gauss emidata.ppp normsum_emidata.pdf
 
 …and the generated particles for comparison::
 
-    python pepperpot.py plot point particles_gauss.txt scatter_particles_gauss.pdf
-    python pepperpot.py plot gauss particles_gauss.txt normsum_particles_gauss.pdf
+    pepperpot plot point particles_gauss.txt scatter_particles_gauss.pdf
+    pepperpot plot gauss particles_gauss.txt normsum_particles_gauss.pdf
 
 …and the probability density::
 
-    python pepperpot.py plot pdist pdist_gauss.npy pdist_gauss.pdf
+    pepperpot plot pdist pdist_gauss.npy pdist_gauss.pdf
 
 
 For more info, see::
 
-    python pepperpot.py -h
+    pepperpot -h
